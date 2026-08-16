@@ -1,1 +1,6 @@
 fastapi[standard]
+beanie
+google-genai
+motor
+pypdf
+python-dotenv
