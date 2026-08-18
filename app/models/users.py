@@ -1,5 +1,5 @@
 from beanie import Document
-from pydantic import Field, ConfigDict, EmailStr
+from pydantic import Field, EmailStr
 
 
 

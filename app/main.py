@@ -7,13 +7,13 @@ from pymongo.errors import ConnectionFailure
 
 from app import api
 from app.models import __beanie_models__
-from app.configs.settings import Settings
+from app.configs.settings import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
-        client: AsyncMongoClient = AsyncMongoClient(Settings.MONGO_URI)
-        await init_beanie(database=client[Settings.MONGO_DB_NAME], document_models=__beanie_models__)
+        client: AsyncMongoClient = AsyncMongoClient(settings.MONGO_URI)
+        await init_beanie(database=client[settings.MONGO_DB_NAME], document_models=__beanie_models__)
         await client.admin.command('ping')  # Check if the connection is successful
         print("Connected to MongoDB successfully.")
     except ConnectionFailure as e:
