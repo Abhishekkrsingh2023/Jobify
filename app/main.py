@@ -35,13 +35,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-origins = list({
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:3000",
-    settings.FRONTEND_URL,
-})
+origins = [settings.FRONTEND_URL]
 
 app.add_middleware(
     CORSMiddleware,
