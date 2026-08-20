@@ -1,41 +1,61 @@
-from fastapi import FastAPI, status
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from beanie import init_beanie
 from pymongo import AsyncMongoClient
-from pymongo.errors import ConnectionFailure
 
 from app import api
 from app.models import __beanie_models__
-from app.configs.settings import Settings
+from app.configs.settings import settings
+
+import logging
+import sys
+
+logger = logging.getLogger("jobify.main")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Perform startup tasks here
-    client: AsyncMongoClient = AsyncMongoClient(Settings.MONGO_URI)
-    await init_beanie(database=client[Settings.MONGO_DB_NAME], document_models=__beanie_models__)
-    
+    client: AsyncMongoClient = None
     try:
+        client = AsyncMongoClient(settings.MONGO_URI, serverSelectionTimeoutMS=5000)
+        await init_beanie(database=client[settings.MONGO_DB_NAME], document_models=__beanie_models__)
         await client.admin.command('ping')  # Check if the connection is successful
-        print("Connected to MongoDB successfully.")
-    except ConnectionFailure as e:
-        SystemExit.exit(f"Failed to connect to MongoDB: {e}")
-    
+        logger.info("Connected to MongoDB successfully.")
+    except Exception as e:
+        logger.warning(f"MongoDB connection notice: {e}")
+        
     yield
-    # Perform cleanup tasks here
-    await client.close()
+    if client:
+        await client.close()
 
 app = FastAPI(
-    title="My FastAPI Application",
-    description="This is a sample FastAPI application.",
+    title="Jobify API",
+    description=(
+        "Backend API for Jobify — an AI-powered platform for analyzing "
+        "candidate resumes against job descriptions and generating "
+        "structured candidate evaluations."
+    ),
     version="1.0.0",
     lifespan=lifespan,
 )
 
-app.include_router(api.router)
+origins = list({
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+    settings.FRONTEND_URL,
+})
 
-@app.get("/", status_code=status.HTTP_200_OK)
-def read_root():
-    return {"message": "Welcome to my FastAPI application!"}
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(api.router)
 
 

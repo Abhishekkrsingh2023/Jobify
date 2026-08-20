@@ -1,10 +1,10 @@
 from google.genai import Client
 
-from app.configs.settings import Settings
+from app.configs.settings import settings
 from app.schemas.job_schema import JobifyAnalysisRequest
 
 client = Client(
-    api_key=Settings.GEMINI_API_KEY
+    api_key=settings.GEMINI_API_KEY
 )
 
 async def generate_job_analysis(
