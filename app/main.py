@@ -33,6 +33,8 @@ app = FastAPI(
     ),
     version="1.0.0",
     lifespan=lifespan,
+    redoc_url=None,
+    docs_url=None,
 )
 
 origins = [settings.FRONTEND_URL]
@@ -45,6 +47,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(api.router)
+app.frontend("/", directory="dist")
+app.include_router(api.router, prefix='/api/v1')
 
 
