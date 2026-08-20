@@ -7,7 +7,7 @@ from app.utils.date_time_utils import get_current_utc_time
 from app.schemas.job_schema import JobInfo, CandidateProfile, JobifyAnalysis
 
 class JobAnalysis(Document):
-    user_id: PydanticObjectId = Field(..., description="The ID of the user who submitted the job analysis.")
+    user_id: str = Field(..., description="The ID of the user who submitted the job analysis.")
     job_info: JobInfo
     candidate_profile: CandidateProfile
     jobify_analysis: JobifyAnalysis

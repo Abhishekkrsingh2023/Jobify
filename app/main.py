@@ -7,12 +7,8 @@ from pymongo import AsyncMongoClient
 
 from app import api
 from app.models import __beanie_models__
-from app.configs.settings import settings
+from app.core.settings import settings
 
-import logging
-import sys
-
-logger = logging.getLogger("jobify.main")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -21,9 +17,8 @@ async def lifespan(app: FastAPI):
         client = AsyncMongoClient(settings.MONGO_URI, serverSelectionTimeoutMS=5000)
         await init_beanie(database=client[settings.MONGO_DB_NAME], document_models=__beanie_models__)
         await client.admin.command('ping')  # Check if the connection is successful
-        logger.info("Connected to MongoDB successfully.")
     except Exception as e:
-        logger.warning(f"MongoDB connection notice: {e}")
+        SystemExit(f"DATABASE CONNECTION ERROR: {e}")
         
     yield
     if client:

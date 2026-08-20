@@ -1,6 +1,6 @@
 from google.genai import Client
 
-from app.configs.settings import settings
+from app.core.settings import settings
 from app.schemas.job_schema import JobifyAnalysisRequest
 
 client = Client(
