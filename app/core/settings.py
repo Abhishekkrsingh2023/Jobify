@@ -7,8 +7,9 @@ load_dotenv()
 class Settings:
     MONGO_URI: str = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
     MONGO_DB_NAME: str = os.getenv("MONGO_DB_NAME", "jobify")
-    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY")
     
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY")
+    MODEL_NAME: str = os.getenv("MODEL_NAME", "GEMINI")
     # Clerk Authentication & Webhook Settings
     CLERK_SECRET_KEY: str = os.getenv("CLERK_SECRET_KEY")
     # CLERK_WEBHOOK_SECRET: Optional[str] = os.getenv("CLERK_WEBHOOK_SECRET")

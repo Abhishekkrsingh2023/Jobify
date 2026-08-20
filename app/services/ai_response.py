@@ -56,7 +56,7 @@ SELF-DESCRIPTION:
 """
     # async call to the Gemini API to analyze the job description
     interaction = await client.aio.interactions.create(
-        model="gemini-3.6-flash",
+        model=settings.MODEL_NAME,
         input=prompt,
         response_format={
             "type": "text",
