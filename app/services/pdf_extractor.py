@@ -1,6 +1,9 @@
 from pypdf import PdfReader
 
-def extract_text_from_pdf(file_path: str|None = None, stream: bytes|None = None) -> str:
+
+def extract_text_from_pdf(
+    file_path: str | None = None, stream: bytes | None = None
+) -> str:
     """_summary_
 
     Args:
@@ -14,10 +17,11 @@ def extract_text_from_pdf(file_path: str|None = None, stream: bytes|None = None)
         reader = PdfReader(stream)
     else:
         reader = PdfReader(file_path)
-        
+
     text = ""
     for page in reader.pages:
         text += page.extract_text() or ""
     return text
+
 
 # print(extract_text_from_pdf(file_path))

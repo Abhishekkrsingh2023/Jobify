@@ -1,13 +1,13 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from beanie import init_beanie
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pymongo import AsyncMongoClient
 
 from app import api
-from app.models import __beanie_models__
 from app.core.settings import settings
+from app.models import __beanie_models__
 
 
 @asynccontextmanager
@@ -15,14 +15,17 @@ async def lifespan(app: FastAPI):
     client: AsyncMongoClient = None
     try:
         client = AsyncMongoClient(settings.MONGO_URI, serverSelectionTimeoutMS=5000)
-        await init_beanie(database=client[settings.MONGO_DB_NAME], document_models=__beanie_models__)
-        await client.admin.command('ping')  # Check if the connection is successful
+        await init_beanie(
+            database=client[settings.MONGO_DB_NAME], document_models=__beanie_models__
+        )
+        await client.admin.command("ping")  # Check if the connection is successful
     except Exception as e:
-        SystemExit(f"DATABASE CONNECTION ERROR: {e}")
-        
+        raise SystemExit(f"DATABASE CONNECTION ERROR: {e}") from e
+
     yield
     if client:
         await client.close()
+
 
 app = FastAPI(
     title="Jobify API",
@@ -48,6 +51,4 @@ app.add_middleware(
 )
 
 app.frontend("/", directory="dist")
-app.include_router(api.router, prefix='/api/v1')
-
-
+app.include_router(api.router, prefix="/api/v1")

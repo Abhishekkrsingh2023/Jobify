@@ -3,13 +3,12 @@ from google.genai import Client
 from app.core.settings import settings
 from app.schemas.job_schema import JobifyAnalysisRequest
 
-client = Client(
-    api_key=settings.GEMINI_API_KEY
-)
+client = Client(api_key=settings.GEMINI_API_KEY)
+
 
 async def generate_job_analysis(
     resume_text: str,
-    job_description: str, 
+    job_description: str,
     self_description: str,
 ) -> JobifyAnalysisRequest:
     """
@@ -64,7 +63,7 @@ SELF-DESCRIPTION:
             "schema": JobifyAnalysisRequest.model_json_schema(),
         },
     )
-    
+
     return JobifyAnalysisRequest.model_validate_json(interaction.output_text)
 
 
@@ -75,7 +74,7 @@ if __name__ == "__main__":
         result = await generate_job_analysis(
             resume_text="Your resume text here",
             job_description="Your job description here",
-            self_description="Your self-description here"
+            self_description="Your self-description here",
         )
         print(result)
 

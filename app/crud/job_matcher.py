@@ -23,7 +23,7 @@ async def analyse_job_details(
     analysis = await generate_job_analysis(
         resume_text=resume_text,
         job_description=job_description,
-        self_description=self_description
+        self_description=self_description,
     )
 
     job_analysis = JobAnalysis(
