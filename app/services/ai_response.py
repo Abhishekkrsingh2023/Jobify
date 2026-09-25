@@ -1,9 +1,77 @@
-from google.genai import Client
+import logging
+
+from fastapi import HTTPException, status
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai.chat_models import GoogleAPIError
 
 from app.core.settings import settings
 from app.schemas.job_schema import JobifyAnalysisRequest
 
-client = Client(api_key=settings.GEMINI_API_KEY)
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# LLM + chain — built once at module load, reused across requests
+# ---------------------------------------------------------------------------
+
+_llm = ChatGoogleGenerativeAI(
+    model=settings.MODEL_NAME,
+    google_api_key=settings.GEMINI_API_KEY,
+    temperature=0,
+)
+
+_SYSTEM = """\
+You are an expert technical recruiter. Evaluate the candidate against the \
+JOB DESCRIPTION using ONLY the provided RESUME and SELF-DESCRIPTION.
+
+### Grounding
+* Never invent skills, experience, projects, qualifications, or facts.
+* If inferred, label it as inference in the explanation.
+* Missing information → "unknown" where the schema allows it.
+
+### Evaluation Rules
+* matched: candidate level ≥ required level with direct evidence.
+* partial: skill exists but below required level, or evidence only implied.
+* missing: skill required but no evidence found.
+* match_percentage: reflect evidence strength and level gap; avoid round scores.
+* score_breakdown weights must sum to 1.0.
+* readiness: factor in overall_score AND the worst unresolved skill_gap severity.
+* skill_gaps: only partial or missing skills.
+* strengths: only matched skills with strong evidence.
+* Write summary last so it is consistent with scores, strengths, and gaps.\
+"""
+
+_HUMAN = """\
+RESUME:
+{resume_text}
+
+JOB DESCRIPTION:
+{job_description}
+
+SELF-DESCRIPTION:
+{self_description}\
+"""
+
+_prompt = ChatPromptTemplate.from_messages(
+    [("system", _SYSTEM), ("human", _HUMAN)]
+)
+
+# with_structured_output enforces the Pydantic schema via Gemini's native
+# JSON-schema mode. with_retry explicitly catches GoogleAPIError (503/429)
+# and retries with exponential backoff + jitter.
+_chain = _prompt | _llm.with_structured_output(
+    JobifyAnalysisRequest,
+    method="json_mode",
+).with_retry(
+    retry_if_exception_type=(GoogleAPIError,),
+    stop_after_attempt=3,
+    wait_exponential_jitter=True,
+)
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
 
 async def generate_job_analysis(
@@ -12,65 +80,42 @@ async def generate_job_analysis(
     self_description: str,
 ) -> JobifyAnalysisRequest:
     """
-    Analyze a job description using the Gemini API (async).
+    Analyze a resume against a job description using Gemini via LangChain.
+
+    Retries up to 3× with exponential backoff on transient API errors.
 
     Args:
-        resume_text (str): The text content of the candidate's resume.
-        job_description (str): The job description to analyze.
-        self_description (str): The candidate's self-description.
+        resume_text: Extracted text from the candidate's PDF resume.
+        job_description: Raw job description text.
+        self_description: Candidate's self-written description.
 
     Returns:
-        JobifyAnalysisRequest: The analysis result as a Pydantic model.
+        JobifyAnalysisRequest: Validated Pydantic model with the full analysis.
+
+    Raises:
+        HTTPException 503: If the AI service is unavailable after all retries.
     """
-    prompt = f"""
-You are an expert technical recruiter. Evaluate the candidate against the JOB DESCRIPTION using only the RESUME, JOB DESCRIPTION, and SELF-DESCRIPTION.
-
-### Grounding
-* Never invent skills, experience, projects, qualifications, or facts.
-* Every `evidence` item must quote/trace to a specific phrase in the RESUME or SELF-DESCRIPTION.
-* No evidence → `evidence: []`.
-* If inferred, label it as inference in the relevant explanation.
-* Missing information → `"unknown"` where allowed, otherwise `"not specified"`.
-
-### Evaluation Rules
-* `matched`: candidate level ≥ required level with direct evidence.
-* `partial`: skill exists but is below required level, or evidence is only implied.
-* `missing`: skill is required but has no evidence.
-* `match_percentage`: reflect both evidence strength and level gap; avoid arbitrary round scores.
-* `score_breakdown`: `weight` = job importance, `score` = candidate performance; weights must sum to `1.0`.
-* `readiness`: consider both `overall_score` and the severity of the worst unresolved `skill_gap`. A critical unresolved gap prevents `almost_ready`/`ready`.
-* `skill_gaps` may contain only skills marked `partial` or `missing`.
-* `strengths` may contain only `matched` skills with strong evidence.
-* Write `summary` last so it is consistent with the scores, strengths, and gaps.
-
-### Input
-RESUME:
-{resume_text}
-
-JOB DESCRIPTION:
-{job_description}
-
-SELF-DESCRIPTION:
-{self_description}
-"""
-    # async call to the Gemini API to analyze the job description
-    interaction = await client.aio.interactions.create(
-        model=settings.MODEL_NAME,
-        input=prompt,
-        response_format={
-            "type": "text",
-            "mime_type": "application/json",
-            "schema": JobifyAnalysisRequest.model_json_schema(),
-        },
-    )
-
-    return JobifyAnalysisRequest.model_validate_json(interaction.output_text)
+    try:
+        result = await _chain.ainvoke(
+            {
+                "resume_text": resume_text,
+                "job_description": job_description,
+                "self_description": self_description,
+            }
+        )
+        return result  # type: ignore[return-value]
+    except Exception as e:
+        logger.exception("Gemini API failed after retries")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI service is currently unavailable. Please try again shortly.",
+        ) from e
 
 
 if __name__ == "__main__":
     import asyncio
 
-    async def main():
+    async def main() -> None:
         result = await generate_job_analysis(
             resume_text="Your resume text here",
             job_description="Your job description here",

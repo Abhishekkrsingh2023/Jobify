@@ -16,7 +16,7 @@ class JobInfo(BaseModel):
         description="The location of the job position.", default=None
     )
     employment_type: str | None = Field(
-        description="The type of employment for the job position, e.g., 'full-time', 'part-time', 'contract', etc.",
+        description="The type of employment, e.g., 'full-time', 'part-time', 'contract'.",
         default=None,
     )
     salary_range: str | None = Field(
@@ -30,15 +30,6 @@ class JobInfo(BaseModel):
         description="A list of skills required for the job position.",
         default_factory=list,
     )
-    responsibilities: list[str] = Field(
-        description="A list of responsibilities associated with the job position.",
-        default_factory=list,
-    )
-    qualifications: list[str] = Field(
-        description="A list of qualifications required for the job position.",
-        default_factory=list,
-    )
-    description: str = Field(description="A detailed description of the job position.")
 
     model_config = ConfigDict(extra="forbid", from_attributes=True)
 
@@ -64,14 +55,6 @@ class CandidateProfile(BaseModel):
         description="The highest level of education the candidate has achieved.",
         default=None,
     )
-    certifications: list[str] = Field(
-        description="A list of certifications the candidate holds.",
-        default_factory=list,
-    )
-    projects: list[str] = Field(
-        description="A list of projects the candidate has worked on.",
-        default_factory=list,
-    )
 
     model_config = ConfigDict(extra="forbid", from_attributes=True)
 
@@ -83,43 +66,22 @@ class CandidateProfile(BaseModel):
 
 class SkillAnalysis(BaseModel):
     skill: str = Field(description="The name of the skill being analyzed.")
-    category: Literal[
-        "language",
-        "framework",
-        "database",
-        "devops",
-        "cloud",
-        "tool",
-        "soft_skill",
-        "concept",
-        "other",
-    ] = Field(
-        description="The category of the skill, e.g., 'language', 'framework', 'database', etc."
-    )
     importance: Literal["low", "medium", "high", "critical"] = Field(
-        description="The importance of the skill, e.g., 'low', 'medium', 'high', 'critical'."
+        description="The importance of the skill for the job."
     )
     required_level: Literal["beginner", "intermediate", "advanced", "expert"] = Field(
-        description="The required proficiency level for the skill as per the job requirements."
+        description="The required proficiency level for the skill."
     )
     candidate_level: Literal[
         "unknown", "beginner", "intermediate", "advanced", "expert"
     ] = Field(description="The candidate's proficiency level in the skill.")
     status: Literal["matched", "partial", "missing", "unknown"] = Field(
-        description="The status of the skill match between the candidate and the job requirements."
+        description="The skill match status between the candidate and job requirements."
     )
     match_percentage: float = Field(
         ge=0,
         le=100,
-        description="The percentage match between the candidate's skill level and the required level for the job.",
-    )
-    evidence: list[str] = Field(
-        description="Evidence supporting the candidate's skill level, such as projects, certifications, or work experience.",
-        default_factory=list,
-    )
-    gap_description: str | None = Field(
-        description="Description of the gap between the candidate's skill level and the required level, if applicable.",
-        default=None,
+        description="Percentage match between the candidate's skill level and the required level.",
     )
 
 
@@ -129,33 +91,21 @@ class SkillAnalysis(BaseModel):
 
 
 class SkillGap(BaseModel):
-    skill: str = Field(
-        description="The skill that has a gap between the candidate's current level and the required level."
-    )
-    category: str = Field(
-        description="The category of the skill, e.g., 'language', 'framework', 'database', etc."
-    )
+    skill: str = Field(description="The skill with a gap.")
     severity: Literal["low", "medium", "high", "critical"] = Field(
-        description="Severity of the skill gap, indicating how critical it is for the candidate to address this gap."
+        description="Severity of the skill gap."
     )
-    current_level: str = Field(
-        description="The candidate's current proficiency level in the skill."
-    )
-    required_level: str = Field(
-        description="The required proficiency level for the skill as per the job requirements."
-    )
+    current_level: str = Field(description="The candidate's current proficiency level.")
+    required_level: str = Field(description="The required proficiency level for the job.")
     reason: str = Field(
-        description="Reason explaining why this skill gap exists, providing context for the candidate."
-    )
-    impact: str = Field(
-        description="Impact of the skill gap on the candidate's ability to perform in the job role, explaining potential consequences."
+        description="Why this gap exists and its impact on the candidate's ability to perform."
     )
     recommended_action: str = Field(
-        description="Recommended action for the candidate to address the skill gap, providing guidance on how to improve."
+        description="What the candidate should do to close this gap."
     )
     estimated_learning_days: int | None = Field(
         ge=0,
-        description="Estimated number of days required for the candidate to learn and improve the skill to the required level, if applicable.",
+        description="Estimated days to reach the required level, if applicable.",
         default=None,
     )
 
@@ -170,15 +120,13 @@ class ScoreComponent(BaseModel):
         ge=0, le=100, description="Score for the component, ranging from 0 to 100."
     )
     weight: float = Field(
-        ge=0, le=1, description="Weight of the component, ranging from 0 to 1."
+        ge=0, le=1, description="Weight of this component; all weights must sum to 1.0."
     )
-    explanation: str = Field(description="Explanation of the score and weight.")
 
 
 class ScoreBreakdown(BaseModel):
     technical_skills: ScoreComponent
     experience: ScoreComponent
-    responsibilities: ScoreComponent
     projects: ScoreComponent
     education: ScoreComponent | None = None
 
@@ -202,21 +150,14 @@ class InterviewQuestion(BaseModel):
         description="Difficulty level of the interview question."
     )
     skill: str | None = Field(
-        description="The skill associated with the interview question, if applicable.",
+        description="The skill being assessed, if applicable.",
         default=None,
     )
-    intention: str = Field(
-        description="The intention behind the interview question, explaining what the interviewer is trying to assess."
-    )
-    expected_topics: list[str] = Field(
-        description="List of expected topics or areas that the candidate should cover in their answer.",
-        default_factory=list,
-    )
     answer_guideline: str = Field(
-        description="Guidelines for the candidate's answer to the interview question."
+        description="Key points the candidate's answer should cover."
     )
     candidate_specific: bool = Field(
-        description="Indicates if the question is specific to the candidate.",
+        description="Whether the question is tailored to this specific candidate.",
         default=False,
     )
 
@@ -231,26 +172,14 @@ class PreparationTask(BaseModel):
     type: Literal["learn", "practice", "build", "revise", "mock_interview"] = Field(
         description="Type of the preparation task."
     )
-    estimated_hours: float | None = Field(
-        ge=0, description="Estimated hours required to complete the task.", default=None
-    )
-    resource_type: str | None = Field(
-        description="Type of resource for the task, e.g., 'video', 'article', 'course', etc.",
-        default=None,
-    )
 
 
 class PreparationPhase(BaseModel):
     phase: int = Field(ge=1, description="The phase number in the preparation roadmap.")
     title: str = Field(description="Title of the preparation phase.")
-    objective: str = Field(description="Objective of the preparation phase.")
     duration_days: int = Field(ge=1, description="Duration of the phase in days.")
-    skills: list[str] = Field(
-        description="List of skills to be focused on during this phase."
-    )
-    milestone: str = Field(
-        description="Milestone to be achieved by the end of this phase."
-    )
+    skills: list[str] = Field(description="Skills to focus on during this phase.")
+    milestone: str = Field(description="Milestone to achieve by the end of this phase.")
     tasks: list[PreparationTask]
 
 
@@ -261,13 +190,7 @@ class PreparationPhase(BaseModel):
 
 class CandidateStrength(BaseModel):
     skill: str = Field(description="The skill in which the candidate excels.")
-    reason: str = Field(
-        description="The reason why the candidate is strong in this skill."
-    )
-    evidence: list[str] = Field(
-        description="Evidence supporting the candidate's strength in this skill.",
-        default_factory=list,
-    )
+    reason: str = Field(description="Why the candidate is strong in this skill.")
 
 
 # -------------------------
@@ -279,10 +202,8 @@ class Recommendation(BaseModel):
     priority: Literal["low", "medium", "high", "critical"] = Field(
         description="Priority level of the recommendation."
     )
-
     title: str = Field(description="Title of the recommendation.")
-    description: str = Field(description="Detailed description of the recommendation.")
-    action: str = Field(description="Action to be taken for the recommendation.")
+    action: str = Field(description="Concrete action to take.")
 
 
 # -------------------------
@@ -294,18 +215,14 @@ class JobifyAnalysis(BaseModel):
     overall_score: float = Field(
         ge=0,
         le=100,
-        description="Overall score of the analysis, ranging from 0 to 100.",
+        description="Overall match score, ranging from 0 to 100.",
     )
-
     readiness: Literal[
         "not_ready", "needs_preparation", "almost_ready", "job_ready", "strong_match"
-    ] = Field(description="Readiness level of the candidate for the job position.")
-    confidence_score: float = Field(
-        ge=0, le=1, description="Confidence score of the analysis, ranging from 0 to 1."
-    )
+    ] = Field(description="Candidate's readiness level for the job.")
     score_breakdown: ScoreBreakdown
     summary: str = Field(
-        description="Summary of the analysis, highlighting key findings and insights."
+        description="Concise summary of key findings, consistent with the scores and gaps."
     )
     strengths: list[CandidateStrength]
     skills: list[SkillAnalysis]
