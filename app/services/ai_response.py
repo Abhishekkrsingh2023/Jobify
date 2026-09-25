@@ -3,6 +3,7 @@ import logging
 from fastapi import HTTPException, status
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai.chat_models import GoogleAPIError
 
 from app.core.settings import settings
 from app.schemas.job_schema import JobifyAnalysisRequest
@@ -55,13 +56,17 @@ _prompt = ChatPromptTemplate.from_messages(
     [("system", _SYSTEM), ("human", _HUMAN)]
 )
 
-# with_structured_output uses Gemini's native JSON-schema mode.
-# with_retry retries up to 3 times with exponential backoff on any transient
-# error (503 / 429 / 500) — no extra code needed.
+# with_structured_output enforces the Pydantic schema via Gemini's native
+# JSON-schema mode. with_retry explicitly catches GoogleAPIError (503/429)
+# and retries with exponential backoff + jitter.
 _chain = _prompt | _llm.with_structured_output(
     JobifyAnalysisRequest,
     method="json_mode",
-).with_retry(stop_after_attempt=3, wait_exponential_jitter=True)
+).with_retry(
+    retry_if_exception_type=(GoogleAPIError,),
+    stop_after_attempt=3,
+    wait_exponential_jitter=True,
+)
 
 
 # ---------------------------------------------------------------------------
