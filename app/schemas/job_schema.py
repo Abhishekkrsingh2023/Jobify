@@ -83,10 +83,6 @@ class SkillAnalysis(BaseModel):
         le=100,
         description="Percentage match between the candidate's skill level and the required level.",
     )
-    evidence: list[str] = Field(
-        description="Evidence from the resume/self-description supporting the candidate's skill level.",
-        default_factory=list,
-    )
 
 
 # -------------------------
@@ -124,9 +120,8 @@ class ScoreComponent(BaseModel):
         ge=0, le=100, description="Score for the component, ranging from 0 to 100."
     )
     weight: float = Field(
-        ge=0, le=1, description="Weight of the component, ranging from 0 to 1."
+        ge=0, le=1, description="Weight of this component; all weights must sum to 1.0."
     )
-    explanation: str = Field(description="Explanation of the score.")
 
 
 class ScoreBreakdown(BaseModel):
@@ -177,15 +172,11 @@ class PreparationTask(BaseModel):
     type: Literal["learn", "practice", "build", "revise", "mock_interview"] = Field(
         description="Type of the preparation task."
     )
-    estimated_hours: float | None = Field(
-        ge=0, description="Estimated hours to complete the task.", default=None
-    )
 
 
 class PreparationPhase(BaseModel):
     phase: int = Field(ge=1, description="The phase number in the preparation roadmap.")
     title: str = Field(description="Title of the preparation phase.")
-    objective: str = Field(description="Objective of the preparation phase.")
     duration_days: int = Field(ge=1, description="Duration of the phase in days.")
     skills: list[str] = Field(description="Skills to focus on during this phase.")
     milestone: str = Field(description="Milestone to achieve by the end of this phase.")
@@ -229,9 +220,6 @@ class JobifyAnalysis(BaseModel):
     readiness: Literal[
         "not_ready", "needs_preparation", "almost_ready", "job_ready", "strong_match"
     ] = Field(description="Candidate's readiness level for the job.")
-    confidence_score: float = Field(
-        ge=0, le=1, description="Analysis confidence score, ranging from 0 to 1."
-    )
     score_breakdown: ScoreBreakdown
     summary: str = Field(
         description="Concise summary of key findings, consistent with the scores and gaps."
